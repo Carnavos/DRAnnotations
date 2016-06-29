@@ -1,8 +1,9 @@
 'use strict';
 
 // private variables
-let aliceText, $xmlData;
+let aliceTextRaw, aliceText, annotatedText, $xmlData;
 let annotations = [];
+const $container = $('#container');
 
 const textFileLocation = '../data/ch08.txt';
 const xmlFileLocation = '../data/ch08.txt.xml';
@@ -29,7 +30,7 @@ const loader = function(fileLocation, fileType) {
       dataType: fileType
     })
     .done(function(data) {
-      console.log(data);
+      // console.log(data);
       resolve(data);
     })
     .fail(function(error) {
@@ -55,7 +56,7 @@ function parseAnnotations () {
     let localAnnotation = { startPosition, endPosition, innerText, category };
     // console.log("localAnnotation", localAnnotation);
     // push to private annotations array
-    annotations.push(localAnnotation);
+    addToAnnotations(localAnnotation);
   });
   console.log("annotations after parse", annotations);
 }
@@ -64,36 +65,49 @@ function setXml (rawXML) {
   $xmlData = $(rawXML);
 }
 
-function createAnnotationArray () {
-  // jQuery XML parsing: returns array of all spans with PERSON category
-  // const $personSpans = $rawXML.find("span[category='PERSON']");
+// set private annotations array
+function addToAnnotations (arrayElement) {
+  annotations.push(arrayElement);
+}
 
-  // add annotations to annotations
+// returns string
+function spliceSpan(str, index, add) {
+  return str.slice(0, index) + (add || "") + str.slice(index, str.length);
+}
+function displayAnnotations() {
+  annotatedText = aliceTextRaw;
+  let spanStartString, spanEndString;
+  // reverse annotations to apply span tags from end of text to beginning (position information should remain relevant throughout)
+  let reverseAnnotations = annotations.reverse();
+  reverseAnnotations.forEach((annotation) => {
+    spanStartString = `<span class='${annotation.category}'>`;
+    spanEndString = `</span>`;
+    // console.log("aliceTextRaw", aliceTextRaw);
+
+    // insert ending tag first to align with reverse annotation strategy
+    annotatedText = spliceSpan(annotatedText, annotation.endPosition + 1, spanEndString);
+    annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString);
+
+  });
+  console.log("annotatedText: ", annotatedText);
+}
+
+// append passed text data to main container div innerHTML
+function displayText (textData) {
+  // set private text variable
+  aliceTextRaw = textData;
+  // console.log("aliceTextRaw", aliceTextRaw);
+  // POSITION CHANGE
+  // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
+  aliceText = aliceTextRaw.replace(/(?:\r\n|\r|\n)/g, '<br>');
+  $container.html(aliceText);
+}
+
+function processAnnotations () {
+  // add annotations to private annotations array
   parseAnnotations();
-
-
-  // // dive to the charseq level within the XML, then jQuery each to create local Annotation objects and push into separate array
-  // const $personSpans = $rawXML.find("span[category='PERSON'] > extent > charseq");
-  // let testAnnotations = [];
-  // $personSpans.each((key, value) => {
-  //   let startPosition = value.attributes[1].value;
-  //   let endPosition = value.attributes[0].value;
-  //   let innerText = value.innerHTML;
-  //   let localAnnotation = { startPosition, endPosition, innerText };
-  //   console.log("localAnnotation", localAnnotation);
-  //   testAnnotations.push(localAnnotation);
-  // });
-  //
-  //
-  // // jQuery XML parsing: returns array of all spans with LOCATION category
-  // const $locationSpans = $rawXML.find("span[category='LOCATION']");
-  // // jQuery XML parsing: returns array of all spans with ORGANIZATION category
-  // const $organizationSpans = $rawXML.find("span[category='ORGANIZATION']");
-  // console.log("$personSpans", $personSpans);
-  // console.log("typeof $personSpans", typeof $personSpans);
-  // console.log($personSpans[0]);
-  // console.log("$locationSpans", $locationSpans);
-  // console.log("$organizationSpans", $organizationSpans);
+  // iterate over annotations array and add spans around pre-existing DOM text innerHTML
+  displayAnnotations();
 }
 
 // asynchronous loading chain, calls text, then xml, adds text to DOM, then adds annotations
@@ -101,9 +115,13 @@ function createAnnotationArray () {
 loader(textFileLocation, 'text')
   .then(
     // resolve handler
-    function(resolve) {
+    function(textData) {
+      // console.log("textData", textData);
       // nothing done with data
       console.log('text loaded');
+      // display text on page
+      displayText(textData);
+
       return loader(xmlFileLocation, 'xml');
     },
     // reject handler
@@ -114,11 +132,12 @@ loader(textFileLocation, 'text')
     // resolve handler
     function(xmlData) {
       console.log('xml loaded', xmlData);
-      // createAnnotationArray(xmlData);
 
       // handle xml data
       setXml(xmlData);
-      createAnnotationArray();
+      // display text on page
+
+      processAnnotations();
     },
     // reject handler
     function(reject){
