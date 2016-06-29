@@ -1,7 +1,7 @@
 'use strict';
 
 // private variables
-let aliceTextRaw, aliceText, annotatedText, $xmlData;
+let aliceTextRaw, annotatedText, $xmlData;
 let annotations = [];
 const $container = $('#container');
 
@@ -41,13 +41,13 @@ const loader = function(fileLocation, fileType) {
 
 // method to push locally produced annotation objects into private annotations array
 function parseAnnotations () {
-  const $xmlParseCollection = $xmlData.find(`span`);
-  console.log($xmlParseCollection);
+  // search through xml data and return span elements object
+  const $xmlParseObject = $xmlData.find(`span`);
+  // console.log($xmlParseObject);
   // jQuery each to iterate over each value in the resulting collection object and mirror text content and character position properties in a new object
-  $xmlParseCollection.each((key, value) => {
+  $xmlParseObject.each((key, value) => {
     // category property for later styling
     let category = value.attributes[0].value.toLowerCase();
-    console.log("category", category);
     // position mining and integer casting
     let startPosition = parseInt(value.children[0].children[0].attributes[1].value);
     let endPosition = parseInt(value.children[0].children[0].attributes[0].value);
@@ -65,16 +65,22 @@ function setXml (rawXML) {
   $xmlData = $(rawXML);
 }
 
+// set private text variable
+function storeText (textData) {
+  aliceTextRaw = textData;
+}
+
 // set private annotations array
 function addToAnnotations (arrayElement) {
   annotations.push(arrayElement);
 }
 
-// returns string
-function spliceSpan(str, index, add) {
-  return str.slice(0, index) + (add || "") + str.slice(index, str.length);
+// string splice method to add span tags one at a time
+function spliceSpan(str, index, spanTag) {
+  return str.slice(0, index) + (spanTag || "") + str.slice(index, str.length);
 }
-function displayAnnotations() {
+
+function insertAnnotations() {
   annotatedText = aliceTextRaw;
   let spanStartString, spanEndString;
   // reverse annotations to apply span tags from end of text to beginning (position information should remain relevant throughout)
@@ -82,32 +88,27 @@ function displayAnnotations() {
   reverseAnnotations.forEach((annotation) => {
     spanStartString = `<span class='${annotation.category}'>`;
     spanEndString = `</span>`;
-    // console.log("aliceTextRaw", aliceTextRaw);
 
     // insert ending tag first to align with reverse annotation strategy
     annotatedText = spliceSpan(annotatedText, annotation.endPosition + 1, spanEndString);
     annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString);
 
   });
-  console.log("annotatedText: ", annotatedText);
-}
-
-// append passed text data to main container div innerHTML
-function displayText (textData) {
-  // set private text variable
-  aliceTextRaw = textData;
-  // console.log("aliceTextRaw", aliceTextRaw);
-  // POSITION CHANGE
-  // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
-  aliceText = aliceTextRaw.replace(/(?:\r\n|\r|\n)/g, '<br>');
-  $container.html(aliceText);
+  // console.log("annotatedText: ", annotatedText);
 }
 
 function processAnnotations () {
   // add annotations to private annotations array
   parseAnnotations();
-  // iterate over annotations array and add spans around pre-existing DOM text innerHTML
-  displayAnnotations();
+  // iterate over annotations array and add span tags to text
+  insertAnnotations();
+}
+
+// append passed text data to main container div innerHTML
+function displayText () {
+  // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
+  annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
+  $container.html(annotatedText);
 }
 
 // asynchronous loading chain, calls text, then xml, adds text to DOM, then adds annotations
@@ -116,12 +117,9 @@ loader(textFileLocation, 'text')
   .then(
     // resolve handler
     function(textData) {
-      // console.log("textData", textData);
-      // nothing done with data
       console.log('text loaded');
-      // display text on page
-      displayText(textData);
-
+      // store text and load xml
+      storeText(textData);
       return loader(xmlFileLocation, 'xml');
     },
     // reject handler
@@ -133,11 +131,12 @@ loader(textFileLocation, 'text')
     function(xmlData) {
       console.log('xml loaded', xmlData);
 
-      // handle xml data
+      // store xml data
       setXml(xmlData);
-      // display text on page
-
+      // process annotation xml and add to existing chat
       processAnnotations();
+      displayText();
+
     },
     // reject handler
     function(reject){
@@ -145,7 +144,6 @@ loader(textFileLocation, 'text')
     }
     // add classes to spans, which will color elements
   );
-// loader(xmlFileLocation, 'xml');
 
 
 
