@@ -28,6 +28,17 @@ const Annotator = (() => {
     });
   };
 
+  // sample uid generator for branding annotations
+  function uidGenerator() {
+    function s4() {
+      return Math.floor((1 + Math.random()) * 0x10000)
+        .toString(16)
+        .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+      s4() + '-' + s4() + s4() + s4();
+  }
+
   // method to push locally produced annotation objects into private annotations array
   function parseAnnotations () {
     // search through xml data and return span elements object
@@ -35,6 +46,7 @@ const Annotator = (() => {
     // console.log($xmlParseObject);
     // jQuery each to iterate over each value in the resulting collection object and mirror text content and character position properties in a new object
     $xmlParseObject.each((key, value) => {
+      let uid = uidGenerator();
       // category property for later styling
       let category = value.attributes[0].value.toLowerCase();
       // position mining and integer casting
@@ -42,11 +54,13 @@ const Annotator = (() => {
       let endPosition = parseInt(value.children[0].children[0].attributes[0].value);
       let innerText = value.children[0].children[0].innerHTML;
       // aggregate local variables into annotation object
-      let localAnnotation = { startPosition, endPosition, innerText, category };
+      let localAnnotation = { startPosition, endPosition, innerText, category, uid };
       // console.log("localAnnotation", localAnnotation);
       // push to private annotations array
       addToAnnotations(localAnnotation);
     });
+    // reverse array; allows for last-first string injection design in insertAnnotations forEach
+    annotations = annotations.reverse();
     console.log("annotations after parse", annotations);
   }
 
@@ -65,43 +79,71 @@ const Annotator = (() => {
     annotations.push(arrayElement);
   }
 
-  // string splice method to add span tags one at a time
+  // string splice method to add span tags via character positions
   function spliceSpan(str, index, spanTag) {
     return str.slice(0, index) + (spanTag || "") + str.slice(index, str.length);
   }
 
-  function insertAnnotations() {
-    annotatedText = aliceTextRaw;
-    let spanStartString, spanEndString;
-    // reverse annotations to apply span tags from end of text to beginning (position information should remain relevant throughout)
-    let reverseAnnotations = annotations.reverse();
-    reverseAnnotations.forEach((annotation) => {
-      spanStartString = `<span class='${annotation.category}'>`;
-      spanEndString = `</span>`;
+  function insertAnnotations(rawText) {
+    // raw text starter string
+    annotatedText = rawText;
 
+    // helper string span variables
+    let spanStartString, spanEndString, innerSpan;
+    // reverse annotation application via span tags in reverse order; back to front (position information should remain relevant throughout)
+    annotations.forEach((annotation) => {
+      // console.log("annotation during LOOP", annotation);
+      spanStartString = `<span id='${annotation.uid}' class='${annotation.category} annotation'>`;
+      spanEndString = `</span>`;
+      innerSpan = `<span id='${annotation.uid}' class="tagText">[${annotation.category}] </span>`;
       // insert ending tag first to align with reverse annotation strategy
       annotatedText = spliceSpan(annotatedText, annotation.endPosition + 1, spanEndString);
-      annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString);
 
+      // insert block containing main annotation span open tag, then an inner span with annotation category text
+      annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString + innerSpan);
+      console.log("insertAnnotations loop startPosition", annotation.startPosition);
     });
     // console.log("annotatedText: ", annotatedText);
-  }
-
-  function processAnnotations () {
-    // add annotations to private annotations array
-    parseAnnotations();
-    // iterate over annotations array and add span tags to text
-    insertAnnotations();
+    console.log("annotations inserted");
   }
 
   // append passed text data to main container div innerHTML
-  function displayText () {
+  // accepts pre-spanned text string
+  function displayText (taggedText) {
     // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
-    annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
-    $container.html(annotatedText);
+    // annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
+
+    // another option for display with line breaks: wrapping text with pre element tags, maintaining linebreaks to DOM
+    let wrappedText = `<pre>${taggedText}</pre>`;
+    // console.log("DISPLAY annotatedText", annotatedText);
+    $container.html(wrappedText);
   }
 
-  // public methods
+  function addEvents () {
+    // general dynamic click event handler for both annotation tag levels
+    $(document.body).on("click", ".annotation", (event) => {
+      // console.log("event.target", event.target);
+      let deleteConfirmation = window.confirm("Delete this annotation?");
+      console.log("deleteConfirmation", deleteConfirmation);
+      // delete from annotations array
+      if (deleteConfirmation) {
+        // select target annotation from annotations array to delete
+        let deleteTarget = annotations.filter(element => event.target.id === element.uid)[0];
+        console.log("deleteTarget", deleteTarget);
+        let annotationPostition = annotations.indexOf(deleteTarget);
+        console.log("annotationPostition", annotationPostition);
+        // splice annotations array
+        if (annotationPostition > -1) annotations.splice(annotationPostition, 1);
+        // reload DOM
+        insertAnnotations(aliceTextRaw);
+        displayText(annotatedText);
+        // console.log("annotations post 2nd display", annotations);
+      }
+
+    });
+  }
+
+  // PRIVATE METHODS
   return {
 
     loadData() {
@@ -127,11 +169,15 @@ const Annotator = (() => {
 
             // store xml data
             storeXml(xmlData);
-            // process annotation xml and add to existing chat
-            processAnnotations();
-            // replace line breaks and append to DOM container
-            displayText();
+            // process annotation xml
+            parseAnnotations();
+            // add spans to text string
+            insertAnnotations(aliceTextRaw);
+            // append annotated text string to DOM container
+            displayText(annotatedText);
 
+            // add events
+            addEvents();
           },
           // reject handler
           function(reject){
@@ -146,6 +192,8 @@ const Annotator = (() => {
 
 // load data and display on DOM
 Annotator.loadData();
+
+
 
 // save button logic
   // select all annotation spans on the page (inner text)
