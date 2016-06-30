@@ -72,16 +72,20 @@ const Annotator = (() => {
 
   function insertAnnotations() {
     annotatedText = aliceTextRaw;
-    let spanStartString, spanEndString;
+    let spanStartString, spanEndString, innerSpan;
     // reverse annotations to apply span tags from end of text to beginning (position information should remain relevant throughout)
     let reverseAnnotations = annotations.reverse();
     reverseAnnotations.forEach((annotation) => {
-      spanStartString = `<span class='${annotation.category}'>`;
+      spanStartString = `<span class='${annotation.category} annotation'>`;
       spanEndString = `</span>`;
-
+      innerSpan = `<span class="tagText">[${annotation.category}] </span>`;
       // insert ending tag first to align with reverse annotation strategy
       annotatedText = spliceSpan(annotatedText, annotation.endPosition + 1, spanEndString);
-      annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString);
+      // add the Text in between span tags (possibly another span?)
+      // annotatedText = spliceSpan(innerSpan, )
+
+
+      annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString + innerSpan);
 
     });
     // console.log("annotatedText: ", annotatedText);
@@ -99,6 +103,21 @@ const Annotator = (() => {
     // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
     annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
     $container.html(annotatedText);
+  }
+
+  function addEvents () {
+    let $annotationSpans = $(".annotation");
+
+    $annotationSpans.on("click", (event) => {
+      console.log("event.target", event.target);
+      let deleteConfirmation = window.confirm("Delete this annotation?");
+      console.log("deleteConfirmation", deleteConfirmation);
+      // delete from annotations array
+      if (deleteConfirmation) {
+        let deleteTarget = annotations.filter(element => event.target);
+      }
+      // delete from DOM OR redisplay?!?!?
+    });
   }
 
   // public methods
@@ -132,6 +151,8 @@ const Annotator = (() => {
             // replace line breaks and append to DOM container
             displayText();
 
+            // add events
+            addEvents();
           },
           // reject handler
           function(reject){
@@ -146,6 +167,8 @@ const Annotator = (() => {
 
 // load data and display on DOM
 Annotator.loadData();
+
+
 
 // save button logic
   // select all annotation spans on the page (inner text)
