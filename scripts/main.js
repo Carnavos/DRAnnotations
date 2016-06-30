@@ -28,6 +28,17 @@ const Annotator = (() => {
     });
   };
 
+  // sample uid generator for branding annotations
+  function uidGenerator() {
+    function s4() {
+      return Math.floor((1 + Math.random()) * 0x10000)
+        .toString(16)
+        .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+      s4() + '-' + s4() + s4() + s4();
+  }
+
   // method to push locally produced annotation objects into private annotations array
   function parseAnnotations () {
     // search through xml data and return span elements object
@@ -35,6 +46,7 @@ const Annotator = (() => {
     // console.log($xmlParseObject);
     // jQuery each to iterate over each value in the resulting collection object and mirror text content and character position properties in a new object
     $xmlParseObject.each((key, value) => {
+      let uid = uidGenerator();
       // category property for later styling
       let category = value.attributes[0].value.toLowerCase();
       // position mining and integer casting
@@ -42,7 +54,7 @@ const Annotator = (() => {
       let endPosition = parseInt(value.children[0].children[0].attributes[0].value);
       let innerText = value.children[0].children[0].innerHTML;
       // aggregate local variables into annotation object
-      let localAnnotation = { startPosition, endPosition, innerText, category };
+      let localAnnotation = { startPosition, endPosition, innerText, category, uid };
       // console.log("localAnnotation", localAnnotation);
       // push to private annotations array
       addToAnnotations(localAnnotation);
@@ -76,15 +88,13 @@ const Annotator = (() => {
     // reverse annotations to apply span tags from end of text to beginning (position information should remain relevant throughout)
     let reverseAnnotations = annotations.reverse();
     reverseAnnotations.forEach((annotation) => {
-      spanStartString = `<span class='${annotation.category} annotation'>`;
+      spanStartString = `<span id='${annotation.uid}' class='${annotation.category} annotation'>`;
       spanEndString = `</span>`;
       innerSpan = `<span class="tagText">[${annotation.category}] </span>`;
       // insert ending tag first to align with reverse annotation strategy
       annotatedText = spliceSpan(annotatedText, annotation.endPosition + 1, spanEndString);
-      // add the Text in between span tags (possibly another span?)
-      // annotatedText = spliceSpan(innerSpan, )
 
-
+      // insert block containing main annotation span open tag, then an inner span with annotation category text
       annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString + innerSpan);
 
     });
