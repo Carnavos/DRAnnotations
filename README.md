@@ -46,6 +46,8 @@ Your solution will be judged on the following criteria, with the most important 
 7. Insert span tags with styling classes into raw text string in reverse order, ensuring xml positioning attributes stay usable without position adjustment tracking or annotation editing. (adding tags only de-syncs character positioning *after* the inserted text)
 8. Refactor helper functions to adhere more to singular responsibility principle.
 9. Refactor to IIFE pattern and modular design, exposing only a loading/initial display method for now.
+10. Implement jQuery dynamic click event handling for a "delete annotation" feature.
+11. Refactor annotation insertion and following display to accept parameters rather than accessing private variables. This eased troubleshooting a DOM refresh display issue after deleting an annotation, which was rooted in the original annotations array reversal location.
 
 ### Setup
 --------------------------------------------
@@ -53,3 +55,4 @@ Your solution will be judged on the following criteria, with the most important 
 2. `cd DRAnnotaions`
 3. `npm install` to install jQuery
 4. Serve via localHost or opening `index.html` in the browser
+5. Delete an annotation by clicking on any colored regions, then accepting the popup confirmation.
