@@ -91,17 +91,13 @@ const Annotator = (() => {
     // console.log("annotatedText: ", annotatedText);
   }
 
-  function processAnnotations () {
-    // add annotations to private annotations array
-    parseAnnotations();
-    // iterate over annotations array and add span tags to text
-    insertAnnotations();
-  }
-
   // append passed text data to main container div innerHTML
   function displayText () {
     // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
-    annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
+    // annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
+
+    // another option for display with line breaks: wrapping text with pre element tags, maintaining linebreaks to DOM
+    annotatedText = `<pre>${annotatedText}</pre>`;
     $container.html(annotatedText);
   }
 
@@ -146,9 +142,11 @@ const Annotator = (() => {
 
             // store xml data
             storeXml(xmlData);
-            // process annotation xml and add to existing chat
-            processAnnotations();
-            // replace line breaks and append to DOM container
+            // process annotation xml
+            parseAnnotations();
+            // add spans to text string
+            insertAnnotations();
+            // append annotated text string to DOM container
             displayText();
 
             // add events
