@@ -56,3 +56,12 @@ Your solution will be judged on the following criteria, with the most important 
 3. `npm install` to install jQuery
 4. Serve via localHost or opening `index.html` in the browser
 5. Delete an annotation by clicking on any colored regions, then accepting the popup confirmation.
+
+### Dependencies and Credits
+--------------------------------------------
+1. jQuery DOM Manipulation and XML Parsing
+2. Document.Selection blog post: http://mark.koli.ch/use-javascript-and-jquery-to-get-user-selected-text
+3. Document.Selection grab HTML Stack Overflow post: http://stackoverflow.com/questions/5643635/how-to-get-selected-html-text-with-javascript
+3. UID Generator Stack Overflow post: http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+4. Recommendation to change <br> tag insertion for line breaks to wrapping all text in <pre> tags: Thomas Buida
+5. Annotation application order hint and general guidance: Jeff Stansberry

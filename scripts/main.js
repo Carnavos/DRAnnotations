@@ -101,7 +101,7 @@ const Annotator = (() => {
 
       // insert block containing main annotation span open tag, then an inner span with annotation category text
       annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString + innerSpan);
-      console.log("insertAnnotations loop startPosition", annotation.startPosition);
+      // console.log("insertAnnotations loop startPosition", annotation.startPosition);
     });
     // console.log("annotatedText: ", annotatedText);
     console.log("annotations inserted");
@@ -120,6 +120,9 @@ const Annotator = (() => {
   }
 
   function addEvents () {
+
+    // DELETE ANNOTATION
+
     // general dynamic click event handler for both annotation tag levels
     $(document.body).on("click", ".annotation", (event) => {
       // console.log("event.target", event.target);
@@ -139,8 +142,62 @@ const Annotator = (() => {
         displayText(annotatedText);
         // console.log("annotations post 2nd display", annotations);
       }
-
     });
+
+    // ADD ANNOTATION
+
+    // $(document.body).on("mouseup", selectionHandler);
+    $(document.body).on("mouseup", getSelectionHtml);
+
+    function selectionHandler () {
+      let selection;
+      // if (window.getSelection) selection = window.getSelection().toString()
+      if (window.getSelection()) {
+        selection = window.getSelection().toString();
+        console.log("selection", selection);
+        // console.log("window.getSelection", window.getSelection());
+
+      }
+      // return selection;
+
+    }
+    // function to return all characters within selection, including html tags
+    function getSelectionHtml() {
+      let selectionHtml;
+      // currently only accomodating Chrome (deleted document.getSelection coverage)
+      if (typeof window.getSelection != "undefined") {
+        let selection = window.getSelection();
+        console.log("selection.range", selection);
+        let tempDiv = document.createElement("div");
+        tempDiv.appendChild(selection.getRangeAt(0).cloneContents());
+        console.log("tempDiv", tempDiv);
+
+        selectionHtml = tempDiv.innerHTML;
+        console.log("selection HTML: ", selectionHtml);
+        // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
+        // process innerHTML and character length condition
+        if (tempDiv.innerHTML.length > 0) popupHandler(tempDiv);
+      }
+    }
+    // accepts html element passed in through getSelectionHtml and displays one of two popups, passes back response if any
+    function popupHandler(htmlElement) {
+      let popupResponse;
+      // check if selection has any characters
+      if (htmlElement.innerHTML.length > 0) {
+        // check if selection contains child nodes (spans)
+        popupResponse = htmlElement.children.length > 0
+        // warning about combining annotations
+        ? alert("Please reselect outside existing notations")
+        // prompt to enter new annotation of three choices
+        : window.prompt("Enter annotation type: \n  Category \n  Person \n  Location")
+      }
+      // iron response
+      if (popupResponse) popupResponse = popupResponse.toLowerCase();
+      console.log("popupResponse", popupResponse);
+      // return popupResponse;
+    }
+
+
   }
 
   // PRIVATE METHODS
