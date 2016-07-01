@@ -40,13 +40,13 @@ const Annotator = (() => {
       s4() + '-' + s4() + s4() + s4();
   }
 
-  function createAnnotation (category, startPosition, endPosition, innerText) {
+  function createAnnotation (category, startPosition, endPosition, innerText, index = 0) {
     let uid = uidGenerator();
     // aggregate local variables into annotation object
     // let localAnnotation = { category, startPosition, endPosition, innerText, uid };
     // console.log("localAnnotation", localAnnotation);
     // push to private annotations array
-    addToAnnotations({ category, startPosition, endPosition, innerText, uid });
+    addToAnnotations({ category, startPosition, endPosition, innerText, uid }, index);
 
   }
 
@@ -68,7 +68,9 @@ const Annotator = (() => {
       createAnnotation(category, startPosition, endPosition, innerText);
     });
     // reverse array; allows for last-first string injection design in insertAnnotations forEach
-    annotations = annotations.reverse();
+
+    // annotations = annotations.reverse();
+
     console.log("annotations after parse", annotations);
   }
 
@@ -82,9 +84,15 @@ const Annotator = (() => {
     aliceTextRaw = textData;
   }
 
-  // alter private annotations array
-  function addToAnnotations (annoObject) {
-    annotations.push(annoObject);
+  // alter private annotations array with default index parameter,
+    // supporting general (unshift) or specific (splice) insertion
+  function addToAnnotations (annoObject, injectIndex) {
+    // possible: unshift if no index
+    // possible: splice with 0 if no index
+
+    // annotations.splice(0, 0, annoObject) is like unshift
+    annotations.splice(injectIndex, 0, annoObject);
+    // annotations.push(annoObject);
   }
 
   // string splice method to add span tags via character positions
@@ -98,7 +106,8 @@ const Annotator = (() => {
 
     // helper string span variables
     let spanStartString, spanEndString, innerSpan;
-    // reverse annotation application via span tags in reverse order; back to front (position information should remain relevant throughout)
+    // annotation application via span tags in reverse order; back to front (position information should remain relevant throughout)
+    // assumes array is already reversed
     annotations.forEach((annotation) => {
       // console.log("annotation during LOOP", annotation);
       spanStartString = `<span id='${annotation.uid}' class='${annotation.category} annotation'>`;
@@ -154,72 +163,104 @@ const Annotator = (() => {
 
     // ADD ANNOTATION
 
-    // $(document.body).on("mouseup", selectionHandler);
-    $(document.body).on("mouseup", getSelectionHtml);
+    $(document.body).on("mouseup", selectionHandler);
 
-    function selectionHandler () {
-      let selection;
-      // if (window.getSelection) selection = window.getSelection().toString()
-      if (window.getSelection()) {
-        selection = window.getSelection().toString();
-        console.log("selection", selection);
-        // console.log("window.getSelection", window.getSelection());
+    // function selectionHandler () {
+    //   let selection;
+    //   // if (window.getSelection) selection = window.getSelection().toString()
+    //   if (window.getSelection()) {
+    //     selection = window.getSelection().toString();
+    //     console.log("selection", selection);
+    //     // console.log("window.getSelection", window.getSelection());
+    //
+    //   }
+    //   // return selection;
+    //
+    // }
 
-      }
-      // return selection;
-
-    }
     // function to return all characters within selection, including html tags
-    function getSelectionHtml() {
-      let selectionHtml;
+    function selectionHandler() {
       // currently only accomodating Chrome (deleted document.getSelection coverage)
       if (typeof window.getSelection != "undefined") {
-        let selection = window.getSelection();
-        let selectionStart = selection.getRangeAt(0).startOffset;
-        let selectionEnd = selection.getRangeAt(0).endOffset;
-        console.log("selection relative start position", selection.getRangeAt(0));
-        let nearestAnnoDOMElement = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling;
-        console.log("previous annotation endPosition: ", nearestAnnoDOMElement);
-        let nearestAnnoArrayElement = annotations.filter(a => a.uid === nearestAnnoDOMElement.id)[0];
-        console.log("indexOf", annotations.indexOf(nearestAnnoArrayElement));
-        let nearestAnnoStartPosition = nearestAnnoArrayElement.startPosition;
-        let nearestAnnoEndPosition = nearestAnnoArrayElement.endPosition;
-        console.log("attempt at selection absolute start pos: ", nearestAnnoStartPosition);
-        console.log("attempt at selection absolute start pos: ", nearestAnnoEndPosition);
+        let windowSelection = window.getSelection();
 
-        let newAnnoStartPosition = nearestAnnoEndPosition + selectionStart;
-        let newAnnoEndPosition = newAnnoStartPosition + selectionEnd;
-        console.log("start: ", newAnnoStartPosition);
-        console.log("end: ", newAnnoEndPosition);
+        // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
+        let detailedSelection = getSelectionDetails(windowSelection);
 
+        // create new annotation *(consider adding optional index parameter to createAnnotation)
+        // createAnnotation("location", newAnnoStartPosition, newAnnoEndPosition, selectionHtml);
         // inserting new annotation into already reversed array
-        annotations.splice();
 
-        let tempDiv = document.createElement("div");
-        tempDiv.appendChild(selection.getRangeAt(0).cloneContents());
-        console.log("tempDiv", tempDiv);
 
-        selectionHtml = tempDiv.innerHTML;
-        console.log("selection HTML: ", selectionHtml);
         // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
         // process innerHTML and character length condition
-        if (tempDiv.innerHTML.length > 0) popupHandler(tempDiv);
+        if (detailedSelection.selectionHtml.length > 0) popupHandler(detailedSelection);
       }
     }
-    // accepts html element passed in through getSelectionHtml and displays one of two popups, passes back response if any
-    function popupHandler(htmlElement) {
+
+    // obtain comparative selection details
+    function getSelectionDetails(selection) {
+      let selectionStart = selection.getRangeAt(0).startOffset;
+      let selectionEnd = selection.getRangeAt(0).endOffset;
+      // console.log("raw selection", selection.getRangeAt(0));
+      let nearestAnnoDOMElement = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling;
+      console.log("previous annotation endPosition: ", nearestAnnoDOMElement);
+
+      let nearestAnnoArrayElement = annotations.filter(a => a.uid === nearestAnnoDOMElement.id)[0];
+      let nearestAnnoArrayElementIndex = annotations.indexOf(nearestAnnoArrayElement);
+      let nearestAnnoStartPosition = nearestAnnoArrayElement.startPosition;
+      let nearestAnnoEndPosition = nearestAnnoArrayElement.endPosition;
+
+      console.log("indexOf", nearestAnnoArrayElementIndex);
+      console.log("selection absolute start pos: ", nearestAnnoStartPosition);
+      console.log("selection absolute end pos: ", nearestAnnoEndPosition);
+
+      let newAnnoStartPosition = nearestAnnoEndPosition + selectionStart;
+      let newAnnoEndPosition = newAnnoStartPosition + selectionEnd;
+
+      console.log("new anno start: ", newAnnoStartPosition);
+      console.log("new anno end: ", newAnnoEndPosition);
+
+      // temporary div to capture exact contents including children span nodes
+      let tempDiv = document.createElement("div");
+      tempDiv.appendChild(selection.getRangeAt(0).cloneContents());
+      console.log("tempDiv", tempDiv);
+
+      let selectionHtml = tempDiv.innerHTML;
+
+      // let hasChildren = selectionHtml.children.length > 0;
+      console.log("selection HTML: ", selectionHtml);
+
+      // return a detailed selection object
+      console.log({ selectionStart, selectionEnd, nearestAnnoDOMElement, nearestAnnoArrayElement, nearestAnnoArrayElementIndex,
+        nearestAnnoStartPosition, nearestAnnoEndPosition, selectionHtml, newAnnoStartPosition, newAnnoEndPosition });
+      return { selectionStart, selectionEnd, nearestAnnoDOMElement, nearestAnnoArrayElement, nearestAnnoArrayElementIndex,
+        nearestAnnoStartPosition, nearestAnnoEndPosition, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
+    }
+
+    // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
+    function popupHandler(selectionDetails) {
       let popupResponse;
       // check if selection has any characters
-      if (htmlElement.innerHTML.length > 0) {
+      if (selectionDetails.selectionHtml.length > 0) {
         // check if selection contains child nodes (spans)
-        popupResponse = htmlElement.children.length > 0
+        // popupResponse = selectionDetails.selectionHtml.children.length > 0
+        popupResponse = (selectionDetails.selectionHtml.children)
         // warning about combining annotations
         ? alert("Please reselect outside existing notations")
         // prompt to enter new annotation of three choices
-        : window.prompt("Enter annotation type: \n  Category \n  Person \n  Location")
+        : window.prompt("Enter annotation type: \n  [C]ategory \n  [P]erson \n  [L]ocation")
       }
-      // iron response
-      if (popupResponse) popupResponse = popupResponse.toLowerCase();
+      // iron response and create annotation
+      if (popupResponse) {
+        popupResponse = popupResponse.toLowerCase();
+        console.log("ironed popupResponse", popupResponse);
+
+        // createAnnotation with OPTIONAL INDEX argument (index of previous, bumping previous one higher in index)
+        createAnnotation(popupResponse.toLowerCase(), selectionDetails.newAnnoStartPosition,
+           selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.nearestAnnoArrayElementIndex);
+         console.log("annotations post popup", annotations);
+      }
       console.log("popupResponse", popupResponse);
       // return popupResponse;
     }
