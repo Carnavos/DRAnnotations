@@ -35,8 +35,19 @@ const Annotator = (() => {
         .toString(16)
         .substring(1);
     }
+    // concatenate 4 character combos separated by hyphens
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
       s4() + '-' + s4() + s4() + s4();
+  }
+
+  function createAnnotation (category, startPosition, endPosition, innerText) {
+    let uid = uidGenerator();
+    // aggregate local variables into annotation object
+    // let localAnnotation = { category, startPosition, endPosition, innerText, uid };
+    // console.log("localAnnotation", localAnnotation);
+    // push to private annotations array
+    addToAnnotations({ category, startPosition, endPosition, innerText, uid });
+
   }
 
   // method to push locally produced annotation objects into private annotations array
@@ -46,18 +57,15 @@ const Annotator = (() => {
     // console.log($xmlParseObject);
     // jQuery each to iterate over each value in the resulting collection object and mirror text content and character position properties in a new object
     $xmlParseObject.each((key, value) => {
-      let uid = uidGenerator();
       // category property for later styling
       let category = value.attributes[0].value.toLowerCase();
       // position mining and integer casting
       let startPosition = parseInt(value.children[0].children[0].attributes[1].value);
       let endPosition = parseInt(value.children[0].children[0].attributes[0].value);
       let innerText = value.children[0].children[0].innerHTML;
-      // aggregate local variables into annotation object
-      let localAnnotation = { startPosition, endPosition, innerText, category, uid };
-      // console.log("localAnnotation", localAnnotation);
-      // push to private annotations array
-      addToAnnotations(localAnnotation);
+
+      // call createAnnotation to aggregate properties into object and insert into annotations array
+      createAnnotation(category, startPosition, endPosition, innerText);
     });
     // reverse array; allows for last-first string injection design in insertAnnotations forEach
     annotations = annotations.reverse();
@@ -74,9 +82,9 @@ const Annotator = (() => {
     aliceTextRaw = textData;
   }
 
-  // set private annotations array
-  function addToAnnotations (arrayElement) {
-    annotations.push(arrayElement);
+  // alter private annotations array
+  function addToAnnotations (annoObject) {
+    annotations.push(annoObject);
   }
 
   // string splice method to add span tags via character positions
@@ -167,7 +175,26 @@ const Annotator = (() => {
       // currently only accomodating Chrome (deleted document.getSelection coverage)
       if (typeof window.getSelection != "undefined") {
         let selection = window.getSelection();
-        console.log("selection.range", selection);
+        let selectionStart = selection.getRangeAt(0).startOffset;
+        let selectionEnd = selection.getRangeAt(0).endOffset;
+        console.log("selection relative start position", selection.getRangeAt(0));
+        let nearestAnnoDOMElement = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling;
+        console.log("previous annotation endPosition: ", nearestAnnoDOMElement);
+        let nearestAnnoArrayElement = annotations.filter(a => a.uid === nearestAnnoDOMElement.id)[0];
+        console.log("indexOf", annotations.indexOf(nearestAnnoArrayElement));
+        let nearestAnnoStartPosition = nearestAnnoArrayElement.startPosition;
+        let nearestAnnoEndPosition = nearestAnnoArrayElement.endPosition;
+        console.log("attempt at selection absolute start pos: ", nearestAnnoStartPosition);
+        console.log("attempt at selection absolute start pos: ", nearestAnnoEndPosition);
+
+        let newAnnoStartPosition = nearestAnnoEndPosition + selectionStart;
+        let newAnnoEndPosition = newAnnoStartPosition + selectionEnd;
+        console.log("start: ", newAnnoStartPosition);
+        console.log("end: ", newAnnoEndPosition);
+
+        // inserting new annotation into already reversed array
+        annotations.splice();
+
         let tempDiv = document.createElement("div");
         tempDiv.appendChild(selection.getRangeAt(0).cloneContents());
         console.log("tempDiv", tempDiv);
@@ -196,6 +223,9 @@ const Annotator = (() => {
       console.log("popupResponse", popupResponse);
       // return popupResponse;
     }
+
+    // create temp annotation without absolute/document positioning
+    // identify positioning based on previous span (add character count to prev annotation start/end props)
 
 
   }
