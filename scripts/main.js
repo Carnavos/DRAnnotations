@@ -1,4 +1,4 @@
-'use strict';
+// 'use strict';
 
 const Annotator = (() => {
   // PRIVATE VARIABLES
@@ -38,6 +38,12 @@ const Annotator = (() => {
     // concatenate 4 character combos separated by hyphens
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
       s4() + '-' + s4() + s4() + s4();
+  }
+
+  // alter private annotations array, supporting general (unshift) or specific (splice) insertion
+  function addToAnnotations (annoObject, injectIndex) {
+    // annotations.splice(0, 0, annoObject) is like unshift
+    annotations.splice(injectIndex, 0, annoObject);
   }
 
   function createAnnotation (category, startPosition, endPosition, innerText, index = 0) {
@@ -84,16 +90,6 @@ const Annotator = (() => {
     aliceTextRaw = textData;
   }
 
-  // alter private annotations array with default index parameter,
-    // supporting general (unshift) or specific (splice) insertion
-  function addToAnnotations (annoObject, injectIndex) {
-    // possible: unshift if no index
-    // possible: splice with 0 if no index
-
-    // annotations.splice(0, 0, annoObject) is like unshift
-    annotations.splice(injectIndex, 0, annoObject);
-    // annotations.push(annoObject);
-  }
 
   // string splice method to add span tags via character positions
   function spliceSpan(str, index, spanTag) {
@@ -184,6 +180,8 @@ const Annotator = (() => {
       if (typeof window.getSelection != "undefined") {
         let windowSelection = window.getSelection();
 
+        // selection gate for span overlapping
+
         // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
         let detailedSelection = getSelectionDetails(windowSelection);
 
@@ -198,28 +196,50 @@ const Annotator = (() => {
       }
     }
 
+    // accept DOM node, return an object with annotation information based on corresponding element in annotations array
+    function getNodeDetails (nodeObject) {
+      const arrayElement = annotations.filter(a => a.uid === nodeObject.id)[0];
+      const arrayElementIndex = annotations.indexOf(arrayElement);
+      const startPosition = arrayElement.startPosition;
+      const endPosition = arrayElement.endPosition;
+      return { arrayElement, arrayElementIndex, startPosition, endPosition }
+    }
+
     // obtain comparative selection details
     function getSelectionDetails(selection) {
-      let selectionStart = selection.getRangeAt(0).startOffset;
-      let selectionEnd = selection.getRangeAt(0).endOffset;
-      // console.log("raw selection", selection.getRangeAt(0));
-      let nearestAnnoDOMElement = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling;
-      console.log("previous annotation endPosition: ", nearestAnnoDOMElement);
+      // obtain selection start and end positions
+      const selectionStart = selection.getRangeAt(0).startOffset;
+      const selectionEnd = selection.getRangeAt(0).endOffset;
+      const selectionContainerLength = selection.getRangeAt(0).commonAncestorContainer.length;
+      console.log("raw selection", selection.getRangeAt(0));
 
-      let nearestAnnoArrayElement = annotations.filter(a => a.uid === nearestAnnoDOMElement.id)[0];
-      let nearestAnnoArrayElementIndex = annotations.indexOf(nearestAnnoArrayElement);
-      let nearestAnnoStartPosition = nearestAnnoArrayElement.startPosition;
-      let nearestAnnoEndPosition = nearestAnnoArrayElement.endPosition;
+      // obtain previous and next annotation siblings for RELATIONAL position gathering [Should eventuall be gathered into separate previousAnnotation and nextAnnotation objects]
 
-      console.log("indexOf", nearestAnnoArrayElementIndex);
-      console.log("selection absolute start pos: ", nearestAnnoStartPosition);
-      console.log("selection absolute end pos: ", nearestAnnoEndPosition);
+      // check if previous node exists, then collect annotation node details
+      const previousAnnoNode = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling
+        ? getNodeDetails(selection.getRangeAt(0).commonAncestorContainer.previousElementSibling)
+        : null;
+      console.log("previousAnnoNode: ", previousAnnoNode);
 
-      let newAnnoStartPosition = nearestAnnoEndPosition + selectionStart;
-      let newAnnoEndPosition = newAnnoStartPosition + selectionEnd;
+      // check if next node exists, then collect annotation node details
+      const nextAnnoNode = selection.getRangeAt(0).commonAncestorContainer.nextElementSibling
+        ? getNodeDetails(selection.getRangeAt(0).commonAncestorContainer.nextElementSibling)
+        : null;
+      console.log("nextAnnoNode: ", nextAnnoNode);
 
+      // if previous node exists, use it for new anno positioning calculation, if not try the next node.
+      // if neither, use original selection positioning
+      const newAnnoStartPosition = previousAnnoNode ? previousAnnoNode.endPosition + selectionStart + 1 // previous
+        : selectionStart; // original selection (non-comparative, in case of no previous/any annotations)
       console.log("new anno start: ", newAnnoStartPosition);
+
+      const newAnnoEndPosition = previousAnnoNode ? newAnnoStartPosition + (selectionEnd - selectionStart) - 1 // previous
+        : selectionEnd - 1;
       console.log("new anno end: ", newAnnoEndPosition);
+
+      const newAnnoIndex = previousAnnoNode ? previousAnnoNode.arrayElementIndex // insert/splice into annotations array at current index
+        : nextAnnoNode ? nextAnnoNode.arrayElementIndex + 1 // place after other annotations
+        : 0; // no surrounding nodes (unshift to annotations)
 
       // temporary div to capture exact contents including children span nodes
       let tempDiv = document.createElement("div");
@@ -228,14 +248,10 @@ const Annotator = (() => {
 
       let selectionHtml = tempDiv.innerHTML;
 
-      // let hasChildren = selectionHtml.children.length > 0;
       console.log("selection HTML: ", selectionHtml);
 
       // return a detailed selection object
-      console.log({ selectionStart, selectionEnd, nearestAnnoDOMElement, nearestAnnoArrayElement, nearestAnnoArrayElementIndex,
-        nearestAnnoStartPosition, nearestAnnoEndPosition, selectionHtml, newAnnoStartPosition, newAnnoEndPosition });
-      return { selectionStart, selectionEnd, nearestAnnoDOMElement, nearestAnnoArrayElement, nearestAnnoArrayElementIndex,
-        nearestAnnoStartPosition, nearestAnnoEndPosition, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
+      return { selectionStart, selectionEnd, newAnnoIndex, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
     }
 
     // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
@@ -249,7 +265,7 @@ const Annotator = (() => {
         // warning about combining annotations
         ? alert("Please reselect outside existing notations")
         // prompt to enter new annotation of three choices
-        : window.prompt("Enter annotation type: \n  [C]ategory \n  [P]erson \n  [L]ocation")
+        : window.prompt("Enter annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation")
       }
       // iron response and create annotation
       if (popupResponse) {
@@ -258,8 +274,12 @@ const Annotator = (() => {
 
         // createAnnotation with OPTIONAL INDEX argument (index of previous, bumping previous one higher in index)
         createAnnotation(popupResponse.toLowerCase(), selectionDetails.newAnnoStartPosition,
-           selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.nearestAnnoArrayElementIndex);
+           selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.newAnnoIndex);
          console.log("annotations post popup", annotations);
+
+         insertAnnotations(aliceTextRaw);
+         displayText(annotatedText);
+
       }
       console.log("popupResponse", popupResponse);
       // return popupResponse;
