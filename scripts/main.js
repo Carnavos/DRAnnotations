@@ -1,4 +1,4 @@
-'use strict';
+// 'use strict';
 
 const Annotator = (() => {
   // PRIVATE VARIABLES
@@ -35,8 +35,25 @@ const Annotator = (() => {
         .toString(16)
         .substring(1);
     }
+    // concatenate 4 character combos separated by hyphens
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
       s4() + '-' + s4() + s4() + s4();
+  }
+
+  // alter private annotations array, supporting general (unshift) or specific (splice) insertion
+  function addToAnnotations (annoObject, injectIndex) {
+    // annotations.splice(0, 0, annoObject) is like unshift
+    annotations.splice(injectIndex, 0, annoObject);
+  }
+
+  function createAnnotation (category, startPosition, endPosition, innerText, index = 0) {
+    let uid = uidGenerator();
+    // aggregate local variables into annotation object
+    // let localAnnotation = { category, startPosition, endPosition, innerText, uid };
+    // console.log("localAnnotation", localAnnotation);
+    // push to private annotations array
+    addToAnnotations({ category, startPosition, endPosition, innerText, uid }, index);
+
   }
 
   // method to push locally produced annotation objects into private annotations array
@@ -46,21 +63,20 @@ const Annotator = (() => {
     // console.log($xmlParseObject);
     // jQuery each to iterate over each value in the resulting collection object and mirror text content and character position properties in a new object
     $xmlParseObject.each((key, value) => {
-      let uid = uidGenerator();
       // category property for later styling
       let category = value.attributes[0].value.toLowerCase();
       // position mining and integer casting
       let startPosition = parseInt(value.children[0].children[0].attributes[1].value);
       let endPosition = parseInt(value.children[0].children[0].attributes[0].value);
       let innerText = value.children[0].children[0].innerHTML;
-      // aggregate local variables into annotation object
-      let localAnnotation = { startPosition, endPosition, innerText, category, uid };
-      // console.log("localAnnotation", localAnnotation);
-      // push to private annotations array
-      addToAnnotations(localAnnotation);
+
+      // call createAnnotation to aggregate properties into object and insert into annotations array
+      createAnnotation(category, startPosition, endPosition, innerText);
     });
     // reverse array; allows for last-first string injection design in insertAnnotations forEach
-    annotations = annotations.reverse();
+
+    // annotations = annotations.reverse();
+
     console.log("annotations after parse", annotations);
   }
 
@@ -74,10 +90,6 @@ const Annotator = (() => {
     aliceTextRaw = textData;
   }
 
-  // set private annotations array
-  function addToAnnotations (arrayElement) {
-    annotations.push(arrayElement);
-  }
 
   // string splice method to add span tags via character positions
   function spliceSpan(str, index, spanTag) {
@@ -90,7 +102,8 @@ const Annotator = (() => {
 
     // helper string span variables
     let spanStartString, spanEndString, innerSpan;
-    // reverse annotation application via span tags in reverse order; back to front (position information should remain relevant throughout)
+    // annotation application via span tags in reverse order; back to front (position information should remain relevant throughout)
+    // assumes array is already reversed
     annotations.forEach((annotation) => {
       // console.log("annotation during LOOP", annotation);
       spanStartString = `<span id='${annotation.uid}' class='${annotation.category} annotation'>`;
@@ -101,7 +114,7 @@ const Annotator = (() => {
 
       // insert block containing main annotation span open tag, then an inner span with annotation category text
       annotatedText = spliceSpan(annotatedText, annotation.startPosition, spanStartString + innerSpan);
-      console.log("insertAnnotations loop startPosition", annotation.startPosition);
+      // console.log("insertAnnotations loop startPosition", annotation.startPosition);
     });
     // console.log("annotatedText: ", annotatedText);
     console.log("annotations inserted");
@@ -120,6 +133,9 @@ const Annotator = (() => {
   }
 
   function addEvents () {
+
+    // DELETE ANNOTATION
+
     // general dynamic click event handler for both annotation tag levels
     $(document.body).on("click", ".annotation", (event) => {
       // console.log("event.target", event.target);
@@ -139,8 +155,140 @@ const Annotator = (() => {
         displayText(annotatedText);
         // console.log("annotations post 2nd display", annotations);
       }
-
     });
+
+    // ADD ANNOTATION
+
+    $(document.body).on("mouseup", selectionHandler);
+
+    // function selectionHandler () {
+    //   let selection;
+    //   // if (window.getSelection) selection = window.getSelection().toString()
+    //   if (window.getSelection()) {
+    //     selection = window.getSelection().toString();
+    //     console.log("selection", selection);
+    //     // console.log("window.getSelection", window.getSelection());
+    //
+    //   }
+    //   // return selection;
+    //
+    // }
+
+    // function to return all characters within selection, including html tags
+    function selectionHandler() {
+      // currently only accomodating Chrome (deleted document.getSelection coverage)
+      if (typeof window.getSelection != "undefined") {
+        let windowSelection = window.getSelection();
+
+        // selection gate for span overlapping
+
+        // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
+        let detailedSelection = getSelectionDetails(windowSelection);
+
+        // create new annotation *(consider adding optional index parameter to createAnnotation)
+        // createAnnotation("location", newAnnoStartPosition, newAnnoEndPosition, selectionHtml);
+        // inserting new annotation into already reversed array
+
+
+        // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
+        // process innerHTML and character length condition
+        if (detailedSelection.selectionHtml.length > 0) popupHandler(detailedSelection);
+      }
+    }
+
+    // accept DOM node, return an object with annotation information based on corresponding element in annotations array
+    function getNodeDetails (nodeObject) {
+      const arrayElement = annotations.filter(a => a.uid === nodeObject.id)[0];
+      const arrayElementIndex = annotations.indexOf(arrayElement);
+      const startPosition = arrayElement.startPosition;
+      const endPosition = arrayElement.endPosition;
+      return { arrayElement, arrayElementIndex, startPosition, endPosition }
+    }
+
+    // obtain comparative selection details
+    function getSelectionDetails(selection) {
+      // obtain selection start and end positions
+      const selectionStart = selection.getRangeAt(0).startOffset;
+      const selectionEnd = selection.getRangeAt(0).endOffset;
+      const selectionContainerLength = selection.getRangeAt(0).commonAncestorContainer.length;
+      console.log("raw selection", selection.getRangeAt(0));
+
+      // obtain previous and next annotation siblings for RELATIONAL position gathering [Should eventuall be gathered into separate previousAnnotation and nextAnnotation objects]
+
+      // check if previous node exists, then collect annotation node details
+      const previousAnnoNode = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling
+        ? getNodeDetails(selection.getRangeAt(0).commonAncestorContainer.previousElementSibling)
+        : null;
+      console.log("previousAnnoNode: ", previousAnnoNode);
+
+      // check if next node exists, then collect annotation node details
+      const nextAnnoNode = selection.getRangeAt(0).commonAncestorContainer.nextElementSibling
+        ? getNodeDetails(selection.getRangeAt(0).commonAncestorContainer.nextElementSibling)
+        : null;
+      console.log("nextAnnoNode: ", nextAnnoNode);
+
+      // if previous node exists, use it for new anno positioning calculation, if not try the next node.
+      // if neither, use original selection positioning
+      const newAnnoStartPosition = previousAnnoNode ? previousAnnoNode.endPosition + selectionStart + 1 // previous
+        : selectionStart; // original selection (non-comparative, in case of no previous/any annotations)
+      console.log("new anno start: ", newAnnoStartPosition);
+
+      const newAnnoEndPosition = previousAnnoNode ? newAnnoStartPosition + (selectionEnd - selectionStart) - 1 // previous
+        : selectionEnd - 1;
+      console.log("new anno end: ", newAnnoEndPosition);
+
+      const newAnnoIndex = previousAnnoNode ? previousAnnoNode.arrayElementIndex // insert/splice into annotations array at current index
+        : nextAnnoNode ? nextAnnoNode.arrayElementIndex + 1 // place after other annotations
+        : 0; // no surrounding nodes (unshift to annotations)
+
+      // temporary div to capture exact contents including children span nodes
+      let tempDiv = document.createElement("div");
+      tempDiv.appendChild(selection.getRangeAt(0).cloneContents());
+      console.log("tempDiv", tempDiv);
+
+      let selectionHtml = tempDiv.innerHTML;
+
+      console.log("selection HTML: ", selectionHtml);
+
+      // return a detailed selection object
+      return { selectionStart, selectionEnd, newAnnoIndex, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
+    }
+
+    // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
+    function popupHandler(selectionDetails) {
+      let popupResponse;
+      // check if selection has any characters
+      if (selectionDetails.selectionHtml.length > 0) {
+        // check if selection contains child nodes (spans)
+        // popupResponse = selectionDetails.selectionHtml.children.length > 0
+        popupResponse = (selectionDetails.selectionHtml.children)
+        // warning about combining annotations
+        ? alert("Please reselect outside existing notations")
+        // prompt to enter new annotation of three choices
+        : window.prompt("Enter annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation")
+      }
+      // iron response and create annotation
+      if (popupResponse) {
+        popupResponse = popupResponse.toLowerCase();
+        console.log("ironed popupResponse", popupResponse);
+
+        // createAnnotation with OPTIONAL INDEX argument (index of previous, bumping previous one higher in index)
+        createAnnotation(popupResponse.toLowerCase(), selectionDetails.newAnnoStartPosition,
+           selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.newAnnoIndex);
+         console.log("annotations post popup", annotations);
+
+         insertAnnotations(aliceTextRaw);
+         displayText(annotatedText);
+
+      }
+      console.log("popupResponse", popupResponse);
+      // return popupResponse;
+    }
+
+    // create temp annotation without absolute/document positioning
+    // identify positioning based on previous span (add character count to prev annotation start/end props)
+
+
   }
 
   // PRIVATE METHODS
