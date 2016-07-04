@@ -1,4 +1,4 @@
-// 'use strict';
+'use strict';
 
 const Annotator = (() => {
   // PRIVATE VARIABLES
@@ -132,12 +132,8 @@ const Annotator = (() => {
   // append passed text data to main container div innerHTML
   // accepts pre-spanned text string
   function displayText (taggedText) {
-    // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
-    // annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
-
     // another option for display with line breaks: wrapping text with pre element tags, maintaining linebreaks to DOM
     let wrappedText = `<pre>${taggedText}</pre>`;
-    // console.log("DISPLAY annotatedText", annotatedText);
     $container.html(wrappedText);
   }
 
@@ -150,11 +146,7 @@ const Annotator = (() => {
   function addEvents () {
 
     // disable standard right click context menu
-    window.oncontextmenu = function () {
-      // showCustomMenu();
-      return false;
-    }
-
+    window.oncontextmenu = () => false
 
     // general dynamic click event handler for both annotation tag levels
     $(document.body).on("click", ".annotation", (event) => {
@@ -182,6 +174,7 @@ const Annotator = (() => {
         // right click -> popup meu to change category tag (no position editing intended)
         case 3:
           console.log("right click hit");
+
           break;
       }
     });
@@ -194,16 +187,21 @@ const Annotator = (() => {
     function selectionHandler() {
       // currently only accomodating Chrome (deleted document.getSelection coverage)
       if (typeof window.getSelection != "undefined") {
-        let windowSelection = window.getSelection();
+        const windowSelection = window.getSelection();
+        // ignore collapsed (equal start/end positions) selections
+        if (!windowSelection.isCollapsed) {
+          console.log(windowSelection);
+          // const selectionRange = window.getSelection().getRangeAt(0);
+          // selection gate for span overlapping
 
-        // selection gate for span overlapping
+          // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
+          const detailedSelection = getSelectionDetails(windowSelection.getRangeAt(0));
 
-        // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
-        let detailedSelection = getSelectionDetails(windowSelection);
-
-        // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
-        // process innerHTML and character length condition
-        if (detailedSelection.selectionHtml.length > 0) popupHandler(detailedSelection);
+          // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
+          // process innerHTML and character length condition
+          // if (detailedSelection.selectionHtml.length > 0) popupHandler(detailedSelection);
+          popupHandler(detailedSelection);
+        }
       }
     }
 
@@ -217,8 +215,8 @@ const Annotator = (() => {
     }
 
     // obtain comparative selection details
-    function getSelectionDetails(selection) {
-      const selectionRange = selection.getRangeAt(0);
+    function getSelectionDetails(selectionRange) {
+      // const selectionRange = selection.getRangeAt(0);
       // obtain selection start and end positions
       const selectionStart = selectionRange.startOffset;
       const selectionEnd = selectionRange.endOffset;
@@ -263,7 +261,7 @@ const Annotator = (() => {
       console.log("selection HTML: ", selectionHtml);
 
       // return a detailed selection object
-      return { selectionStart, selectionEnd, newAnnoIndex, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
+      return { selectionStart, selectionEnd, newAnnoIndex, tempDiv, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
     }
 
     // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
@@ -271,9 +269,11 @@ const Annotator = (() => {
       let popupResponse;
       // check if selection has any characters
       if (selectionDetails.selectionHtml.length > 0) {
+        const containsTags = selectionDetails.selectionHtml.includes("<" || ">");
+        console.log(containsTags);
         // check if selection contains child nodes (spans)
         // popupResponse = selectionDetails.selectionHtml.children.length > 0
-        popupResponse = (selectionDetails.selectionHtml.children)
+        popupResponse = containsTags
         // warning about combining annotations
         ? alert("Please reselect outside existing notations")
         // prompt to enter new annotation of three choices
@@ -299,7 +299,7 @@ const Annotator = (() => {
 
   }
 
-  // PRIVATE METHODS
+  // PUBLIC METHODS
   return {
 
     loadData() {
