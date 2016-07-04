@@ -57,6 +57,16 @@ const Annotator = (() => {
     }
   }
 
+  function editAnnotation (annoObject, categoryString) {
+    // determine annoObject position within annotations array
+    const annotationPostition = annotations.indexOf(annoObject);
+    console.log("annotationPostition: ", annotationPostition);
+    if (annotationPostition > -1) {
+      annotations[annotationPostition].category = categoryString;
+      console.log("annotation edited");
+    }
+  }
+
   // create annotation object, generate unique identifier, them add to annotations array with optional index insertion point
   function createAnnotation (category, startPosition, endPosition, innerText, index = 0) {
     const uid = uidGenerator();
@@ -154,6 +164,9 @@ const Annotator = (() => {
       console.log("event.target", event.target);
       console.log("event.which", event.which);
 
+      // invoke getNodeDetails to serve associated annotations array index and element
+      const targetNode = getNodeDetails(event.target);
+
       switch (event.which) {
         case 1:
           // DELETE ANNOTATION
@@ -162,9 +175,9 @@ const Annotator = (() => {
           // delete from annotations array
           if (deleteConfirmation) {
             // select target annotation from annotations array to delete
-            const deleteTarget = annotations.filter(element => event.target.id === element.uid)[0];
-            console.log("deleteTarget", deleteTarget);
-            removeFromAnnotations(deleteTarget);
+            // const deleteTarget = annotations.filter(element => event.target.id === element.uid)[0];
+            console.log("deleteTarget", targetNode.arrayElement);
+            removeFromAnnotations(targetNode.arrayElement);
             // reload DOM
             loadDom();
           }
@@ -173,8 +186,15 @@ const Annotator = (() => {
         // EDIT ANNOTATION
         // right click -> popup meu to change category tag (no position editing intended)
         case 3:
-          console.log("right click hit");
-
+          // const editTarget = annotations.filter(element => event.target.id === element.uid)[0];
+          console.log("right click hit: edit");
+          const editCategory = window.prompt("Enter new annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation");
+          if (editCategory) {
+            editAnnotation(targetNode.arrayElement, editCategory);
+            
+            // reload page post annotation add
+            loadDom();
+          }
           break;
       }
     });
