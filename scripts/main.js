@@ -205,6 +205,13 @@ const Annotator = (() => {
       }
     }
 
+    // SAVE JSON TO CONSOLE
+    $("#saveButton").click(() => {
+      const jsonString = JSON.stringify({annotations: annotations});
+      console.log("Annotations JSON String: ", jsonString);
+    });
+
+
     // accept DOM node, return an object with annotation information based on corresponding element in annotations array
     function getNodeDetails (nodeObject) {
       const arrayElement = annotations.filter(a => a.uid === nodeObject.id)[0];
@@ -294,7 +301,6 @@ const Annotator = (() => {
 
       }
       console.log("popupResponse", popupResponse);
-      // return popupResponse;
     }
 
   }
@@ -355,5 +361,3 @@ Annotator.loadData();
 // save button logic
   // select all annotation spans on the page (inner text)
   // create an object with category titles as properties, array of objects as value (each iteration with 'start', 'end', 'text/value' properties)
-// let testJsonString = JSON.stringify({annotations: annotations});
-// console.log("testJsonString", testJsonString);
