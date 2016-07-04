@@ -149,7 +149,7 @@ const Annotator = (() => {
     window.oncontextmenu = () => false
 
     // general dynamic click event handler for both annotation tag levels
-    $(document.body).on("click", ".annotation", (event) => {
+    $(document.body).on("mousedown", ".annotation", (event) => {
 
       console.log("event.target", event.target);
       console.log("event.which", event.which);
@@ -191,15 +191,10 @@ const Annotator = (() => {
         // ignore collapsed (equal start/end positions) selections
         if (!windowSelection.isCollapsed) {
           console.log(windowSelection);
-          // const selectionRange = window.getSelection().getRangeAt(0);
-          // selection gate for span overlapping
 
-          // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
+          // pass windowSelection range to getSelectionDetails and return a larger selection object with comparative annotation DOM information
           const detailedSelection = getSelectionDetails(windowSelection.getRangeAt(0));
 
-          // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
-          // process innerHTML and character length condition
-          // if (detailedSelection.selectionHtml.length > 0) popupHandler(detailedSelection);
           popupHandler(detailedSelection);
         }
       }
@@ -274,23 +269,15 @@ const Annotator = (() => {
     // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
     function popupHandler(selectionDetails) {
       let popupResponse;
-      // check if selection has any characters
-      if (selectionDetails.selectionHtml.length > 0) {
-        const containsTags = selectionDetails.selectionHtml.includes("<" || ">");
-        console.log(containsTags);
-        // check if selection contains child nodes (spans)
-        // popupResponse = selectionDetails.selectionHtml.children.length > 0
-        popupResponse = containsTags
+      const containsTags = selectionDetails.selectionHtml.includes("<" || ">");
+      console.log(containsTags);
+      popupResponse = containsTags
         // warning about combining annotations
         ? alert("Please reselect outside existing notations")
         // prompt to enter new annotation of three choices
         : window.prompt("Enter annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation")
-      }
       // iron response and create annotation
       if (popupResponse) {
-        popupResponse = popupResponse.toLowerCase();
-        console.log("ironed popupResponse", popupResponse);
-
         // createAnnotation with OPTIONAL INDEX argument (index of previous, bumping previous one higher in index)
         createAnnotation(popupResponse.toLowerCase(), selectionDetails.newAnnoStartPosition,
            selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.newAnnoIndex);
@@ -298,7 +285,6 @@ const Annotator = (() => {
 
         // reload page post annotation add
         loadDom();
-
       }
       console.log("popupResponse", popupResponse);
     }
