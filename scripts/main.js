@@ -1,4 +1,4 @@
-// 'use strict';
+'use strict';
 
 const Annotator = (() => {
   // PRIVATE VARIABLES
@@ -132,12 +132,8 @@ const Annotator = (() => {
   // append passed text data to main container div innerHTML
   // accepts pre-spanned text string
   function displayText (taggedText) {
-    // replace line breaks with html-readable <br> tags, setting private variable for processed alice text
-    // annotatedText = annotatedText.replace(/(?:\r\n|\r|\n)/g, '<br>');
-
     // another option for display with line breaks: wrapping text with pre element tags, maintaining linebreaks to DOM
     let wrappedText = `<pre>${taggedText}</pre>`;
-    // console.log("DISPLAY annotatedText", annotatedText);
     $container.html(wrappedText);
   }
 
@@ -150,14 +146,10 @@ const Annotator = (() => {
   function addEvents () {
 
     // disable standard right click context menu
-    window.oncontextmenu = function () {
-      // showCustomMenu();
-      return false;
-    }
-
+    window.oncontextmenu = () => false
 
     // general dynamic click event handler for both annotation tag levels
-    $(document.body).on("click", ".annotation", (event) => {
+    $(document.body).on("mousedown", ".annotation", (event) => {
 
       console.log("event.target", event.target);
       console.log("event.which", event.which);
@@ -182,6 +174,7 @@ const Annotator = (() => {
         // right click -> popup meu to change category tag (no position editing intended)
         case 3:
           console.log("right click hit");
+
           break;
       }
     });
@@ -194,18 +187,25 @@ const Annotator = (() => {
     function selectionHandler() {
       // currently only accomodating Chrome (deleted document.getSelection coverage)
       if (typeof window.getSelection != "undefined") {
-        let windowSelection = window.getSelection();
+        const windowSelection = window.getSelection();
+        // ignore collapsed (equal start/end positions) selections
+        if (!windowSelection.isCollapsed) {
+          console.log(windowSelection);
 
-        // selection gate for span overlapping
+          // pass windowSelection range to getSelectionDetails and return a larger selection object with comparative annotation DOM information
+          const detailedSelection = getSelectionDetails(windowSelection.getRangeAt(0));
 
-        // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
-        let detailedSelection = getSelectionDetails(windowSelection);
-
-        // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
-        // process innerHTML and character length condition
-        if (detailedSelection.selectionHtml.length > 0) popupHandler(detailedSelection);
+          popupHandler(detailedSelection);
+        }
       }
     }
+
+    // SAVE JSON TO CONSOLE
+    $("#saveButton").click(() => {
+      const jsonString = JSON.stringify({annotations: annotations});
+      console.log("Annotations JSON String: ", jsonString);
+    });
+
 
     // accept DOM node, return an object with annotation information based on corresponding element in annotations array
     function getNodeDetails (nodeObject) {
@@ -217,8 +217,8 @@ const Annotator = (() => {
     }
 
     // obtain comparative selection details
-    function getSelectionDetails(selection) {
-      const selectionRange = selection.getRangeAt(0);
+    function getSelectionDetails(selectionRange) {
+      // const selectionRange = selection.getRangeAt(0);
       // obtain selection start and end positions
       const selectionStart = selectionRange.startOffset;
       const selectionEnd = selectionRange.endOffset;
@@ -263,27 +263,21 @@ const Annotator = (() => {
       console.log("selection HTML: ", selectionHtml);
 
       // return a detailed selection object
-      return { selectionStart, selectionEnd, newAnnoIndex, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
+      return { selectionStart, selectionEnd, newAnnoIndex, tempDiv, selectionHtml, newAnnoStartPosition, newAnnoEndPosition }
     }
 
     // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
     function popupHandler(selectionDetails) {
       let popupResponse;
-      // check if selection has any characters
-      if (selectionDetails.selectionHtml.length > 0) {
-        // check if selection contains child nodes (spans)
-        // popupResponse = selectionDetails.selectionHtml.children.length > 0
-        popupResponse = (selectionDetails.selectionHtml.children)
+      const containsTags = selectionDetails.selectionHtml.includes("<" || ">");
+      console.log(containsTags);
+      popupResponse = containsTags
         // warning about combining annotations
         ? alert("Please reselect outside existing notations")
         // prompt to enter new annotation of three choices
         : window.prompt("Enter annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation")
-      }
       // iron response and create annotation
       if (popupResponse) {
-        popupResponse = popupResponse.toLowerCase();
-        console.log("ironed popupResponse", popupResponse);
-
         // createAnnotation with OPTIONAL INDEX argument (index of previous, bumping previous one higher in index)
         createAnnotation(popupResponse.toLowerCase(), selectionDetails.newAnnoStartPosition,
            selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.newAnnoIndex);
@@ -291,15 +285,13 @@ const Annotator = (() => {
 
         // reload page post annotation add
         loadDom();
-
       }
       console.log("popupResponse", popupResponse);
-      // return popupResponse;
     }
 
   }
 
-  // PRIVATE METHODS
+  // PUBLIC METHODS
   return {
 
     loadData() {
@@ -355,5 +347,3 @@ Annotator.loadData();
 // save button logic
   // select all annotation spans on the page (inner text)
   // create an object with category titles as properties, array of objects as value (each iteration with 'start', 'end', 'text/value' properties)
-// let testJsonString = JSON.stringify({annotations: annotations});
-// console.log("testJsonString", testJsonString);

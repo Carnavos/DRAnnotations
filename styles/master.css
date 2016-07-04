@@ -7,3 +7,9 @@
 .location {
   background-color: lightgreen;
 }
+
+#saveButton {
+  margin: 0 auto;
+  display: block;
+  text-align: center;
+}
