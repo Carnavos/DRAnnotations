@@ -50,6 +50,7 @@ Your solution will be judged on the following criteria, with the most important 
 11. Refactor annotation insertion and following display to accept parameters rather than accessing private variables. This eased troubleshooting a DOM refresh display issue after deleting an annotation, which was rooted in the original annotations array reversal location.
 12. Refactor array reversal into a reusable splice method to ease new annotation addition.
 13. Design selection handler with comparative info generation to enable relational annotation injection.
+14. Enable add annotation based on previous node or no node, automatic detection based on current selection.
 
 ### Setup
 --------------------------------------------
@@ -64,6 +65,6 @@ Your solution will be judged on the following criteria, with the most important 
 1. jQuery DOM Manipulation and XML Parsing
 2. Document.Selection blog post: http://mark.koli.ch/use-javascript-and-jquery-to-get-user-selected-text
 3. Document.Selection grab HTML Stack Overflow post: http://stackoverflow.com/questions/5643635/how-to-get-selected-html-text-with-javascript
-3. UID Generator Stack Overflow post: http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
-4. Recommendation to change from <br> tag insertion for line breaks to wrapping all text in <pre> tags: Thomas Buida III
-5. Annotation application order hint and general guidance: Jeff Stansberry
+4. UID Generator Stack Overflow post: http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+5. Recommendation to change from <br> tag insertion for line breaks to wrapping all text in `<pre>` tags: Thomas Buida III
+6. Annotation application order hint and general guidance: Jeff Stansberry

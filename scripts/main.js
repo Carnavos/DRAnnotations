@@ -46,11 +46,20 @@ const Annotator = (() => {
     annotations.splice(injectIndex, 0, annoObject);
   }
 
+  // determine position of passed annotation object in annotations array and remove it
+  function removeFromAnnotations (annoObject) {
+    // determine annoObject position within annotations array
+    const annotationPostition = annotations.indexOf(annoObject);
+    console.log("annotationPostition: ", annotationPostition);
+    if (annotationPostition > -1) {
+      annotations.splice(annotationPostition, 1);
+      console.log("annotation deleted");
+    }
+  }
+
+  // create annotation object, generate unique identifier, them add to annotations array with optional index insertion point
   function createAnnotation (category, startPosition, endPosition, innerText, index = 0) {
-    let uid = uidGenerator();
-    // aggregate local variables into annotation object
-    // let localAnnotation = { category, startPosition, endPosition, innerText, uid };
-    // console.log("localAnnotation", localAnnotation);
+    const uid = uidGenerator();
     // push to private annotations array
     addToAnnotations({ category, startPosition, endPosition, innerText, uid }, index);
 
@@ -64,11 +73,11 @@ const Annotator = (() => {
     // jQuery each to iterate over each value in the resulting collection object and mirror text content and character position properties in a new object
     $xmlParseObject.each((key, value) => {
       // category property for later styling
-      let category = value.attributes[0].value.toLowerCase();
+      const category = value.attributes[0].value.toLowerCase();
       // position mining and integer casting
-      let startPosition = parseInt(value.children[0].children[0].attributes[1].value);
-      let endPosition = parseInt(value.children[0].children[0].attributes[0].value);
-      let innerText = value.children[0].children[0].innerHTML;
+      const startPosition = parseInt(value.children[0].children[0].attributes[1].value);
+      const endPosition = parseInt(value.children[0].children[0].attributes[0].value);
+      const innerText = value.children[0].children[0].innerHTML;
 
       // call createAnnotation to aggregate properties into object and insert into annotations array
       createAnnotation(category, startPosition, endPosition, innerText);
@@ -132,47 +141,54 @@ const Annotator = (() => {
     $container.html(wrappedText);
   }
 
+  // combo insertAnnotations and display text
+  function loadDom() {
+    insertAnnotations(aliceTextRaw);
+    displayText(annotatedText);
+  }
+
   function addEvents () {
 
-    // DELETE ANNOTATION
+    // disable standard right click context menu
+    window.oncontextmenu = function () {
+      // showCustomMenu();
+      return false;
+    }
+
 
     // general dynamic click event handler for both annotation tag levels
     $(document.body).on("click", ".annotation", (event) => {
-      // console.log("event.target", event.target);
-      let deleteConfirmation = window.confirm("Delete this annotation?");
-      console.log("deleteConfirmation", deleteConfirmation);
-      // delete from annotations array
-      if (deleteConfirmation) {
-        // select target annotation from annotations array to delete
-        let deleteTarget = annotations.filter(element => event.target.id === element.uid)[0];
-        console.log("deleteTarget", deleteTarget);
-        let annotationPostition = annotations.indexOf(deleteTarget);
-        console.log("annotationPostition", annotationPostition);
-        // splice annotations array
-        if (annotationPostition > -1) annotations.splice(annotationPostition, 1);
-        // reload DOM
-        insertAnnotations(aliceTextRaw);
-        displayText(annotatedText);
-        // console.log("annotations post 2nd display", annotations);
+
+      console.log("event.target", event.target);
+      console.log("event.which", event.which);
+
+      switch (event.which) {
+        case 1:
+          // DELETE ANNOTATION
+          const deleteConfirmation = window.confirm("Delete this annotation?");
+          console.log("deleteConfirmation", deleteConfirmation);
+          // delete from annotations array
+          if (deleteConfirmation) {
+            // select target annotation from annotations array to delete
+            const deleteTarget = annotations.filter(element => event.target.id === element.uid)[0];
+            console.log("deleteTarget", deleteTarget);
+            removeFromAnnotations(deleteTarget);
+            // reload DOM
+            loadDom();
+          }
+          break;
+
+        // EDIT ANNOTATION
+        // right click -> popup meu to change category tag (no position editing intended)
+        case 3:
+          console.log("right click hit");
+          break;
       }
     });
 
     // ADD ANNOTATION
 
     $(document.body).on("mouseup", selectionHandler);
-
-    // function selectionHandler () {
-    //   let selection;
-    //   // if (window.getSelection) selection = window.getSelection().toString()
-    //   if (window.getSelection()) {
-    //     selection = window.getSelection().toString();
-    //     console.log("selection", selection);
-    //     // console.log("window.getSelection", window.getSelection());
-    //
-    //   }
-    //   // return selection;
-    //
-    // }
 
     // function to return all characters within selection, including html tags
     function selectionHandler() {
@@ -184,11 +200,6 @@ const Annotator = (() => {
 
         // pass windowSelection to getSelectionDetails and return a larger selection object with comparative annotation DOM information
         let detailedSelection = getSelectionDetails(windowSelection);
-
-        // create new annotation *(consider adding optional index parameter to createAnnotation)
-        // createAnnotation("location", newAnnoStartPosition, newAnnoEndPosition, selectionHtml);
-        // inserting new annotation into already reversed array
-
 
         // this should be higher in the chain, unsure how to limit selection when mouseup triggers selection as well
         // process innerHTML and character length condition
@@ -207,23 +218,24 @@ const Annotator = (() => {
 
     // obtain comparative selection details
     function getSelectionDetails(selection) {
+      const selectionRange = selection.getRangeAt(0);
       // obtain selection start and end positions
-      const selectionStart = selection.getRangeAt(0).startOffset;
-      const selectionEnd = selection.getRangeAt(0).endOffset;
-      const selectionContainerLength = selection.getRangeAt(0).commonAncestorContainer.length;
-      console.log("raw selection", selection.getRangeAt(0));
+      const selectionStart = selectionRange.startOffset;
+      const selectionEnd = selectionRange.endOffset;
+      const selectionContainerLength = selectionRange.commonAncestorContainer.length;
+      console.log("raw selection", selectionRange);
 
       // obtain previous and next annotation siblings for RELATIONAL position gathering [Should eventuall be gathered into separate previousAnnotation and nextAnnotation objects]
 
       // check if previous node exists, then collect annotation node details
-      const previousAnnoNode = selection.getRangeAt(0).commonAncestorContainer.previousElementSibling
-        ? getNodeDetails(selection.getRangeAt(0).commonAncestorContainer.previousElementSibling)
+      const previousAnnoNode = selectionRange.commonAncestorContainer.previousElementSibling
+        ? getNodeDetails(selectionRange.commonAncestorContainer.previousElementSibling)
         : null;
       console.log("previousAnnoNode: ", previousAnnoNode);
 
       // check if next node exists, then collect annotation node details
-      const nextAnnoNode = selection.getRangeAt(0).commonAncestorContainer.nextElementSibling
-        ? getNodeDetails(selection.getRangeAt(0).commonAncestorContainer.nextElementSibling)
+      const nextAnnoNode = selectionRange.commonAncestorContainer.nextElementSibling
+        ? getNodeDetails(selectionRange.commonAncestorContainer.nextElementSibling)
         : null;
       console.log("nextAnnoNode: ", nextAnnoNode);
 
@@ -242,11 +254,11 @@ const Annotator = (() => {
         : 0; // no surrounding nodes (unshift to annotations)
 
       // temporary div to capture exact contents including children span nodes
-      let tempDiv = document.createElement("div");
-      tempDiv.appendChild(selection.getRangeAt(0).cloneContents());
+      const tempDiv = document.createElement("div");
+      tempDiv.appendChild(selectionRange.cloneContents());
       console.log("tempDiv", tempDiv);
 
-      let selectionHtml = tempDiv.innerHTML;
+      const selectionHtml = tempDiv.innerHTML;
 
       console.log("selection HTML: ", selectionHtml);
 
@@ -275,19 +287,15 @@ const Annotator = (() => {
         // createAnnotation with OPTIONAL INDEX argument (index of previous, bumping previous one higher in index)
         createAnnotation(popupResponse.toLowerCase(), selectionDetails.newAnnoStartPosition,
            selectionDetails.newAnnoEndPosition, selectionDetails.selectionHtml, selectionDetails.newAnnoIndex);
-         console.log("annotations post popup", annotations);
+        console.log("annotations post popup", annotations);
 
-         insertAnnotations(aliceTextRaw);
-         displayText(annotatedText);
+        // reload page post annotation add
+        loadDom();
 
       }
       console.log("popupResponse", popupResponse);
       // return popupResponse;
     }
-
-    // create temp annotation without absolute/document positioning
-    // identify positioning based on previous span (add character count to prev annotation start/end props)
-
 
   }
 
@@ -326,6 +334,7 @@ const Annotator = (() => {
 
             // add events
             addEvents();
+
           },
           // reject handler
           function(reject){
@@ -346,3 +355,5 @@ Annotator.loadData();
 // save button logic
   // select all annotation spans on the page (inner text)
   // create an object with category titles as properties, array of objects as value (each iteration with 'start', 'end', 'text/value' properties)
+// let testJsonString = JSON.stringify({annotations: annotations});
+// console.log("testJsonString", testJsonString);
