@@ -50,6 +50,7 @@ Your solution will be judged on the following criteria, with the most important 
 11. Refactor annotation insertion and following display to accept parameters rather than accessing private variables. This eased troubleshooting a DOM refresh display issue after deleting an annotation, which was rooted in the original annotations array reversal location.
 12. Refactor array reversal into a reusable splice method to ease new annotation addition.
 13. Design selection handler with comparative info generation to enable relational annotation injection.
+14. Enable add annotation based on previous node or no node, automatic detection based on current selection.
 
 ### Setup
 --------------------------------------------
