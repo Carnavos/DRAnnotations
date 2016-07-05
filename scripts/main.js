@@ -152,7 +152,7 @@ const Annotator = (() => {
     const instructionsString =
     "<p><strong>Left click</strong> an Annotation to Delete.</p>"
     + "<p><strong>Right click</strong> an Annotation to Edit Category.</p>"
-    + "<p><strong>Left click and drag</strong> over an un-annotated text region to add a new Annotation.</p>"
+    + "<p><strong>Left click and drag</strong> over an un-annotated text region to add a new Annotation. (type the full word)</p>"
 
     $instructions.html(instructionsString);
   }
@@ -186,7 +186,6 @@ const Annotator = (() => {
           // delete from annotations array
           if (deleteConfirmation) {
             // select target annotation from annotations array to delete
-            // const deleteTarget = annotations.filter(element => event.target.id === element.uid)[0];
             console.log("deleteTarget", targetNode.arrayElement);
             removeFromAnnotations(targetNode.arrayElement);
             // reload DOM
@@ -199,7 +198,7 @@ const Annotator = (() => {
         case 3:
           // const editTarget = annotations.filter(element => event.target.id === element.uid)[0];
           console.log("right click hit: edit");
-          const editCategory = window.prompt("Enter new annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation");
+          const editCategory = window.prompt("Enter new annotation type: \n  Organization \n  Person \n  Location").toLowerCase();
           if (editCategory) {
             editAnnotation(targetNode.arrayElement, editCategory);
 
