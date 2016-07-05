@@ -5,6 +5,7 @@ const Annotator = (() => {
   let aliceTextRaw, annotatedText, $xmlData;
   let annotations = [];
   const $container = $('#container');
+  const $instructions = $('.instructions');
 
   const textFileLocation = '../data/ch08.txt';
   const xmlFileLocation = '../data/ch08.txt.xml';
@@ -147,10 +148,20 @@ const Annotator = (() => {
     $container.html(wrappedText);
   }
 
+  function displayInstructions () {
+    const instructionsString =
+    "<p><strong>Left click</strong> an Annotation to Delete.</p>"
+    + "<p><strong>Right click</strong> an Annotation to Edit Category.</p>"
+    + "<p><strong>Left click and drag</strong> over an un-annotated text region to add a new Annotation.</p>"
+
+    $instructions.html(instructionsString);
+  }
+
   // combo insertAnnotations and display text
   function loadDom() {
     insertAnnotations(aliceTextRaw);
     displayText(annotatedText);
+    displayInstructions();
   }
 
   function addEvents () {
@@ -191,7 +202,7 @@ const Annotator = (() => {
           const editCategory = window.prompt("Enter new annotation type: \n  [O]rganization \n  [P]erson \n  [L]ocation");
           if (editCategory) {
             editAnnotation(targetNode.arrayElement, editCategory);
-            
+
             // reload page post annotation add
             loadDom();
           }
@@ -288,10 +299,9 @@ const Annotator = (() => {
 
     // accepts selectionDetails object passed in through getSelectionHtml and displays one of two popups, passes back response if any
     function popupHandler(selectionDetails) {
-      let popupResponse;
       const containsTags = selectionDetails.selectionHtml.includes("<" || ">");
       console.log(containsTags);
-      popupResponse = containsTags
+      const popupResponse = containsTags
         // warning about combining annotations
         ? alert("Please reselect outside existing notations")
         // prompt to enter new annotation of three choices
@@ -339,10 +349,11 @@ const Annotator = (() => {
             storeXml(xmlData);
             // process annotation xml
             parseAnnotations();
+
             // add spans to text string
-            insertAnnotations(aliceTextRaw);
             // append annotated text string to DOM container
-            displayText(annotatedText);
+            // display instructions
+            loadDom();
 
             // add events
             addEvents();
