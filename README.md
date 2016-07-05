@@ -52,6 +52,8 @@ Your solution will be judged on the following criteria, with the most important 
 13. Design selection handler with comparative info generation to enable relational annotation injection.
 14. Enable add annotation based on previous node or no node, automatic detection based on current selection.
 15. Add a JSON stringify statement to log annotations in console.
+16. Enable edit annotation by disabling standard context menu and setting up a switch statement for mousedown events.
+
 
 ### Setup
 --------------------------------------------
@@ -67,5 +69,6 @@ Your solution will be judged on the following criteria, with the most important 
 2. Document.Selection blog post: http://mark.koli.ch/use-javascript-and-jquery-to-get-user-selected-text
 3. Document.Selection grab HTML Stack Overflow post: http://stackoverflow.com/questions/5643635/how-to-get-selected-html-text-with-javascript
 4. UID Generator Stack Overflow post: http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
-5. Recommendation to change from <br> tag insertion for line breaks to wrapping all text in `<pre>` tags: Thomas Buida III
-6. Annotation application order hint and general guidance: Jeff Stansberry
+5. Context menu disable SO Post: http://stackoverflow.com/questions/2405771/is-right-click-a-javascript-event
+6. Recommendation to change from <br> tag insertion for line breaks to wrapping all text in `<pre>` tags: Thomas Buida III
+7. Annotation application order hint and general guidance: Jeff Stansberry
